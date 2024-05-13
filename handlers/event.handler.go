@@ -6,7 +6,7 @@ import (
 	"net/http"
 )
 
-func EventHandler(w http.ResponseWriter, r *http.Request, accounts map[int]account) {
+func EventHandler(w http.ResponseWriter, r *http.Request, accounts map[string]account) {
 	var body body
 	var response string
 
@@ -20,23 +20,62 @@ func EventHandler(w http.ResponseWriter, r *http.Request, accounts map[int]accou
 
 	switch bodyType {
 	case "deposit":
-		id := accounts[body.Destination].ID
-		if id == 0 {
-			accounts[body.Destination] = account{ID: body.Destination, Balance: 10}
+		destination := body.Destination
+		id := accounts[destination].ID
+		if id == "" {
+			accounts[destination] = account{ID: destination, Balance: body.Amount}
 			w.WriteHeader(http.StatusCreated)
-
-			response = fmt.Sprintf("%d {'destination': id:%d, balance:%d}", http.StatusCreated, accounts[body.Destination].ID, accounts[body.Destination].Balance)
+			response = fmt.Sprintf("%d {'destination': id:'%s', balance:%d}", http.StatusCreated, accounts[destination].ID, accounts[destination].Balance)
 			json.NewEncoder(w).Encode(response)
 			return
 		}
 
-		accounts[body.Destination] = account{ID: body.Destination, Balance: accounts[body.Destination].Balance + body.Amount}
+		accounts[destination] = account{ID: destination, Balance: accounts[destination].Balance + body.Amount}
 
-		fmt.Printf("accountDestination é %+v\n", accounts[body.Destination])
-
-		response = fmt.Sprintf("%d {'destination': id:%d, balance:%d}", http.StatusCreated, accounts[body.Destination].ID, accounts[body.Destination].Balance)
+		response = fmt.Sprintf("%d {'destination': id:%s, balance:%d}", http.StatusCreated, accounts[destination].ID, accounts[destination].Balance)
 
 		w.WriteHeader(http.StatusCreated)
 		json.NewEncoder(w).Encode(response)
+
+	case "withdraw":
+		origin := body.Origin
+		id := accounts[origin].ID
+		if id == "" {
+			w.WriteHeader(http.StatusNotFound)
+			response = fmt.Sprintf("%d 0", http.StatusNotFound)
+			json.NewEncoder(w).Encode(response)
+			return
+		}
+
+		accounts[origin] = account{ID: origin, Balance: accounts[origin].Balance - body.Amount}
+
+		fmt.Printf("accountDestination é %+v\n", accounts[origin])
+
+		response = fmt.Sprintf("%d {'origin': id:%s, balance:%d}", http.StatusCreated, accounts[origin].ID, accounts[origin].Balance)
+
+		w.WriteHeader(http.StatusCreated)
+		json.NewEncoder(w).Encode(response)
+
+	case "transfer":
+		origin := body.Origin
+		destination := body.Destination
+		id := accounts[origin].ID
+		if id == "" {
+			w.WriteHeader(http.StatusNotFound)
+			response = fmt.Sprintf("%d 0", http.StatusNotFound)
+			json.NewEncoder(w).Encode(response)
+			return
+		}
+
+		accounts[destination] = account{ID: destination, Balance: 0}
+
+		accounts[origin] = account{ID: origin, Balance: accounts[origin].Balance - body.Amount}
+		accounts[destination] = account{ID: destination, Balance: accounts[destination].Balance + body.Amount}
+
+		response = fmt.Sprintf("%d {'origin': id:'%s', balance:'%d'}, 'destination': {id:'%s', balance:'%d'}", http.StatusCreated, accounts[origin].ID, accounts[origin].Balance, accounts[destination].ID, accounts[destination].Balance)
+
+		w.WriteHeader(http.StatusCreated)
+		json.NewEncoder(w).Encode(response)
+
 	}
 }

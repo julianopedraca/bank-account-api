@@ -49,8 +49,6 @@ func EventHandler(w http.ResponseWriter, r *http.Request, accounts map[string]ac
 
 		accounts[origin] = account{ID: origin, Balance: accounts[origin].Balance - body.Amount}
 
-		fmt.Printf("accountDestination é %+v\n", accounts[origin])
-
 		response = fmt.Sprintf("%d {'origin': id:%s, balance:%d}", http.StatusCreated, accounts[origin].ID, accounts[origin].Balance)
 
 		w.WriteHeader(http.StatusCreated)

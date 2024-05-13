@@ -2,13 +2,11 @@ package handlers
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 )
 
 func EventHandler(w http.ResponseWriter, r *http.Request, accounts map[string]account) {
 	var body body
-	var response string
 
 	err := json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
@@ -25,14 +23,24 @@ func EventHandler(w http.ResponseWriter, r *http.Request, accounts map[string]ac
 		if id == "" {
 			accounts[destination] = account{ID: destination, Balance: body.Amount}
 			w.WriteHeader(http.StatusCreated)
-			response = fmt.Sprintf("%d {'destination': id:'%s', balance:%d}", http.StatusCreated, accounts[destination].ID, accounts[destination].Balance)
+
+			response := struct {
+				Destination account `json:"destination"`
+			}{
+				Destination: accounts[destination],
+			}
+
 			json.NewEncoder(w).Encode(response)
 			return
 		}
 
 		accounts[destination] = account{ID: destination, Balance: accounts[destination].Balance + body.Amount}
 
-		response = fmt.Sprintf("%d {'destination': id:%s, balance:%d}", http.StatusCreated, accounts[destination].ID, accounts[destination].Balance)
+		response := struct {
+			Destination account `json:"destination"`
+		}{
+			Destination: accounts[destination],
+		}
 
 		w.WriteHeader(http.StatusCreated)
 		json.NewEncoder(w).Encode(response)
@@ -42,14 +50,17 @@ func EventHandler(w http.ResponseWriter, r *http.Request, accounts map[string]ac
 		id := accounts[origin].ID
 		if id == "" {
 			w.WriteHeader(http.StatusNotFound)
-			response = fmt.Sprintf("%d 0", http.StatusNotFound)
-			json.NewEncoder(w).Encode(response)
+			json.NewEncoder(w).Encode(0)
 			return
 		}
 
 		accounts[origin] = account{ID: origin, Balance: accounts[origin].Balance - body.Amount}
 
-		response = fmt.Sprintf("%d {'origin': id:%s, balance:%d}", http.StatusCreated, accounts[origin].ID, accounts[origin].Balance)
+		response := struct {
+			Origin account `json:"origin"`
+		}{
+			Origin: accounts[origin],
+		}
 
 		w.WriteHeader(http.StatusCreated)
 		json.NewEncoder(w).Encode(response)
@@ -60,8 +71,7 @@ func EventHandler(w http.ResponseWriter, r *http.Request, accounts map[string]ac
 		id := accounts[origin].ID
 		if id == "" {
 			w.WriteHeader(http.StatusNotFound)
-			response = fmt.Sprintf("%d 0", http.StatusNotFound)
-			json.NewEncoder(w).Encode(response)
+			json.NewEncoder(w).Encode(0)
 			return
 		}
 
@@ -70,7 +80,13 @@ func EventHandler(w http.ResponseWriter, r *http.Request, accounts map[string]ac
 		accounts[origin] = account{ID: origin, Balance: accounts[origin].Balance - body.Amount}
 		accounts[destination] = account{ID: destination, Balance: accounts[destination].Balance + body.Amount}
 
-		response = fmt.Sprintf("%d {'origin': id:'%s', balance:'%d'}, 'destination': {id:'%s', balance:'%d'}", http.StatusCreated, accounts[origin].ID, accounts[origin].Balance, accounts[destination].ID, accounts[destination].Balance)
+		response := struct {
+			Origin      account `json:"origin"`
+			Destination account `json:"destination"`
+		}{
+			Origin:      accounts[origin],
+			Destination: accounts[destination],
+		}
 
 		w.WriteHeader(http.StatusCreated)
 		json.NewEncoder(w).Encode(response)

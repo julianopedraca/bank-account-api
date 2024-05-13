@@ -1,17 +1,18 @@
 package handlers
 
 import (
-	"encoding/json"
-	"fmt"
 	"net/http"
 
 	"golang.org/x/exp/maps"
 )
 
 func ResetHandler(w http.ResponseWriter, r *http.Request, accounts map[string]account) {
-	var response string
 	maps.Clear(accounts)
 	w.WriteHeader(http.StatusOK)
-	response = fmt.Sprintf("%d OK", http.StatusOK)
-	json.NewEncoder(w).Encode(response)
+	_, err := w.Write([]byte("OK"))
+	if err != nil {
+		// Handle error if unable to write response
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
